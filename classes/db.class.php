@@ -1,6 +1,6 @@
-<?
+<?php
 
-class fbmysql
+class DB
 {
 	private $debug = false;
 	
@@ -8,23 +8,26 @@ class fbmysql
 	private $db_user;
 	private $db_pass;
 	private $db_name;
-	
+	private $memcached;
+    
     private $db_link;
     
     private $query_num = 0;
     
-	public function __construct($connectinfo)
+	public function __construct($connectinfo,$conndebug=false,$connmemcached=null)
 	{
 		$this->db_host = $connectinfo['db_host'];
 		$this->db_user = $connectinfo['db_user'];
 		$this->db_pass = $connectinfo['db_pass'];
 		$this->db_name = $connectinfo['db_name'];
 		
-		if($connectinfo['debug'])
+		if($conndebug)
 			$this->debugOn();
 		
 		$this->db_connect();
-			
+		
+        $this->memcached = $connmemcached;
+        
 		$this->time_start = $this->getPageTime();
 	}
 	
@@ -69,6 +72,12 @@ class fbmysql
 		return $res;
 	}
 	
+    public function mc_query($query,$ttl)
+    {
+        
+    
+    }
+    
 	public function db_get_insert_id()
 	{
 		$this->debugger('db_get_insert_id','');
@@ -89,24 +98,25 @@ class fbmysql
 	{
 		$this->debug = true;
 	}
-        private function debugger($func,$msg)
-        {
-                if($this->debug === true)
-                {
-                        echo '<pre>';
-                        echo '<b>'.$func.'</b>'."\t";
-                        echo $msg;
-                        echo '</pre>';
-                }
-        }
+    
+    private function debugger($func,$msg)
+    {
+            if($this->debug === true)
+            {
+                    echo '<pre>';
+                    echo '<b>'.$func.'</b>'."\t";
+                    echo $msg;
+                    echo '</pre>';
+            }
+    }
 
-        private function errorHandle($err)
-        {
-                echo '<pre>';
-                echo '<b>Fatal Error: </b>'.$err;
-                echo '</pre>';
-        	exit();
-        }
+    private function errorHandle($err)
+    {
+            echo '<pre>';
+            echo '<b>Fatal Error: </b>'.$err;
+            echo '</pre>';
+        exit();
+    }
 
     public function sanitize($input)
     {
