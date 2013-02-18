@@ -8,6 +8,8 @@ class DB
 	private $db_user;
 	private $db_pass;
 	private $db_name;
+	private $mc_host;
+	private $mc_port;
 	private $memcached;
     
     private $db_link;
@@ -20,15 +22,39 @@ class DB
 		$this->db_user = $connectinfo['db_user'];
 		$this->db_pass = $connectinfo['db_pass'];
 		$this->db_name = $connectinfo['db_name'];
+		$this->mc_host = $connmemcached['host'];
+		$this->mc_port = $connmemcached['port'];
 		
 		if($conndebug)
 			$this->debugOn();
 		
 		$this->db_connect();
 		
-        $this->memcached = $connmemcached;
+		$this->mc_connect();
         
 		$this->time_start = $this->getPageTime();
+	}
+	
+	private function mc_connect()
+	{
+		if($this->mc_host && $this->mc_port)
+		{
+			$this->debugger('mc_connect','host: '.$this->mc_host.':'.$this->mc_port);
+			
+			if (extension_loaded('memcached'))
+			{
+				$this->memcached = new Memcached();
+				if(!$this->memcached->addServer($this->mc_host,$this->mc_port))
+					$this->errorHandle('Could not connect to memcached server: '.$this->mc_host.' '.$this->mc_port);
+			}
+			/*else if (extension_loaded('memcache'))
+			{
+				$this->memcached = new Memcache();
+				$this->memcached->connect($this->mc_host,$this->mc_port);
+			}*/	
+			else
+				$this->errorHandle("Could not find any memcache module!");
+		}
 	}
 	
 	public function __destruct()
@@ -72,10 +98,26 @@ class DB
 		return $res;
 	}
 	
-    public function mc_query($query,$ttl)
+    public function mc_query($sql,$ttl=30)
     {
-        
-    
+    	$hash = md5($sql);
+    	$result = $this->memcached->get($hash);
+    	$this->debugger('mc_query','Query: '.$sql);
+    	$this->debugger('mc_query','Hash: '.$hash);
+    	$this->debugger('mc_query','Found: '.var_dump($result));
+    	if($this->memcached->getResultCode())
+    		$this->errorHandle('Memcached Get Error: '.$this->memcached->getResultCode());
+    			
+    	if(!$result)
+    	{
+    		$result = $this->db_query($sql);
+    		$this->memcached->set($hash,$result, time() + $ttl);
+    		
+    		if($this->memcached->getResultCode())
+    			$this->errorHandle('Memcached Set Error: '.$this->memcached->getResultCode());
+    	}
+    	
+    	return $result;
     }
     
 	public function db_get_insert_id()
@@ -132,5 +174,6 @@ class DB
                 $time = $time[1] + $time[0];
                 return $time;
     }
+
 
 }

@@ -1,19 +1,14 @@
 <?php
-error_reporting(false);
+error_reporting(true);
 
 require('./config.php');
 require('./classes/db.class.php');
-
-if($CONFIG['memcached'])
-{
-    if (extension_loaded('memcached'))
-        $mc = new Memcached();
-    else if (extension_loaded('memcache'))
-        $mc = new Memcache();
-    else
-        echo "Could not find any memcache module!";
-}
     
-$db = new DB($CONFIG['db'],$CONFIG['debug'],$mc);
+$db = new DB($CONFIG['db'],$CONFIG['debug'],$CONFIG['memcached']);
 
+$res = $db->mc_query('select * from user',30);
+while($row = mysql_fetch_row($res))
+{
+	print_r($row);
+}
 ?>
