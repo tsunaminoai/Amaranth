@@ -11,6 +11,7 @@ class DB
 	private $mc_host;
 	private $mc_port;
 	private $memcached;
+    private $mcdflag;
     
     private $db_link;
     
@@ -46,12 +47,15 @@ class DB
 				$this->memcached = new Memcached();
 				if(!$this->memcached->addServer($this->mc_host,$this->mc_port))
 					$this->errorHandle('Could not connect to memcached server: '.$this->mc_host.' '.$this->mc_port);
+                
+                $this->mcdflag = true;
 			}
-			/*else if (extension_loaded('memcache'))
+			else if (extension_loaded('memcache'))
 			{
 				$this->memcached = new Memcache();
 				$this->memcached->connect($this->mc_host,$this->mc_port);
-			}*/	
+                $this->mcdflag = false;
+			}	
 			else
 				$this->errorHandle("Could not find any memcache module!");
 		}
@@ -95,7 +99,7 @@ class DB
 	
 		$this->query_num++;
 		
-		return $res;
+		return $this->resourceToArray($res);
 	}
 	
     public function mc_query($sql,$ttl=30)
@@ -105,19 +109,31 @@ class DB
     	$this->debugger('mc_query','Query: '.$sql);
     	$this->debugger('mc_query','Hash: '.$hash);
     	$this->debugger('mc_query','Found: '.var_dump($result));
-    	if($this->memcached->getResultCode())
+    	if($this->mcdflag && $this->memcached->getResultCode())
     		$this->errorHandle('Memcached Get Error: '.$this->memcached->getResultCode());
     			
     	if(!$result)
     	{
     		$result = $this->db_query($sql);
-    		$this->memcached->set($hash,$result, time() + $ttl);
-    		
-    		if($this->memcached->getResultCode())
+            if($this->mcdflag)
+                $this->memcached->set($hash,$result, time() + $ttl);
+    		else
+                $this->memcached->set($hash,$result, MEMCACHE_COMPRESSED, time() + $ttl);
+            
+    		if($this->mcdflag && $this->memcached->getResultCode())
     			$this->errorHandle('Memcached Set Error: '.$this->memcached->getResultCode());
     	}
     	
     	return $result;
+    }
+    
+    private function resourceToArray($res)
+    {
+        $return = array();
+        while($obj = mysql_fetch_object($res))
+            $return[] = $obj;
+        
+        return $return;
     }
     
 	public function db_get_insert_id()
