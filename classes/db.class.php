@@ -108,8 +108,8 @@ class DB
     	$result = $this->memcached->get($hash);
     	$this->debugger('mc_query','Query: '.$sql);
     	$this->debugger('mc_query','Hash: '.$hash);
-    	$this->debugger('mc_query','Found: '.var_dump($result));
-    	if($this->mcdflag && $this->memcached->getResultCode())
+    	$this->debugger('mc_query','Found: '.($result?'yes':'no'));
+    	if($this->mcdflag && ($ret = $this->memcached->getResultCode()) != 0 && $ret != 16 )
     		$this->errorHandle('Memcached Get Error: '.$this->memcached->getResultCode());
     			
     	if(!$result)
