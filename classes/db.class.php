@@ -10,10 +10,10 @@ class DB
 	private $db_name;
 	private $mc_host;
 	private $mc_port;
-	private $memcached;
+	private $mc;
     private $mcdflag;
     
-    private $db_link;
+    private $db;
     
     private $query_num = 0;
     
@@ -44,16 +44,16 @@ class DB
 			
 			if (extension_loaded('memcached'))
 			{
-				$this->memcached = new Memcached();
-				if(!$this->memcached->addServer($this->mc_host,$this->mc_port))
+				$this->mc = new Memcached();
+				if(!$this->mc->addServer($this->mc_host,$this->mc_port))
 					$this->errorHandle('Could not connect to memcached server: '.$this->mc_host.' '.$this->mc_port);
                 
                 $this->mcdflag = true;
 			}
 			else if (extension_loaded('memcache'))
 			{
-				$this->memcached = new Memcache();
-				$this->memcached->connect($this->mc_host,$this->mc_port);
+				$this->mc = new Memcache();
+				$this->mc->connect($this->mc_host,$this->mc_port);
                 $this->mcdflag = false;
 			}	
 			else
@@ -70,58 +70,75 @@ class DB
 	{
 		$this->debugger('db_connect','host: '.$this->db_host);
 
-		$this->db_link = mysql_connect($this->db_host,$this->db_user,$this->db_pass);
-		if(mysql_error())
-			echo $this->errorHandle('SQL Error:<br/>'."\t".mysql_error());
+		$this->db = new mysqli($this->db_host,$this->db_user,$this->db_pass, $this->db_name);
+		if($this->db->connect_errno)
+			echo $this->errorHandle('DB Connection Error:<br/>'."\t".$db->connect_error);
 	
-		$this->debugger('db_connect','db: '.$this->db_name);
+		$this->db->autocommit(TRUE);
+		
+		$this->debugger('db_connect','db: '.$this->db->host_info);
 
-		mysql_select_db($this->db_name,$this->db_link);
-		if(mysql_error())
-			echo $this->errorHandle('SQL Error:<br/>'."\t".mysql_error());
 	}
 
 	private function db_disconnect()
 	{
-		mysql_close($this->db_link);
+		$this->db->close();
 	}
 
-	public function db_query($query)
+	private function db_query($query)
 	{
 		$this->debugger('db_query','sql: '.$query);
 
-		$res = mysql_query($query, $this->db_link);
+		$res = $this->db->query($query);
 
-		$this->debugger('db_query','Result: '.mysql_info());
-
-		if(mysql_error())
-			echo $this->errorHandle('SQL Error:<br/>'."\t".$query.'<br/><br/>'."\t".mysql_error());
-	
-		$this->query_num++;
+		$this->debugger('db_query','Result: '.$this->db->sqlstate);
+		$this->debugger('db_query','Info: '.$this->db->info);
 		
-		return $this->resourceToArray($res);
+		if($this->db->errno)
+			echo $this->errorHandle('SQL Error:<br/>'."\t".$query.'<br/><br/>'."\tError #".$this->db->errno." - ".$this->db->error);
+			
+		return $res;
 	}
 	
-    public function mc_query($sql,$ttl=30)
+    public function doquery($sql,$ttl=30)
     {
+    	$sql = $this->sanitize($sql);
+    	//if there is no memcached server, default to being a wrapper
+    	if(!$this->mc)
+    		return $this->db_query($sql);
+    	
+    	//get the cached query result
     	$hash = md5($sql);
-    	$result = $this->memcached->get($hash);
+    	$result = $this->mc->get($hash);
     	$this->debugger('mc_query','Query: '.$sql);
     	$this->debugger('mc_query','Hash: '.$hash);
     	$this->debugger('mc_query','Found: '.($result?'yes':'no'));
-    	if($this->mcdflag && ($ret = $this->memcached->getResultCode()) != 0 && $ret != 16 )
-    		$this->errorHandle('Memcached Get Error: '.$this->memcached->getResultCode());
-    			
+    	//if the get() is not "not found" or "success" throw error
+    	if($this->mcdflag && ($ret = $this->mc->getResultCode()) != 0 && $ret != 16 )
+    		$this->errorHandle('Memcached Get Error: '.$this->mc->getResultCode());
+    	
+    	//if there is no result, make one and cache it
     	if(!$result)
     	{
     		$result = $this->db_query($sql);
-            if($this->mcdflag)
-                $this->memcached->set($hash,$result, time() + $ttl);
-    		else
-                $this->memcached->set($hash,$result, MEMCACHE_COMPRESSED, time() + $ttl);
-            
-    		if($this->mcdflag && $this->memcached->getResultCode())
-    			$this->errorHandle('Memcached Set Error: '.$this->memcached->getResultCode());
+    		//if this was an modification query, do resets
+    		if(strcasecmp('SELECT',explode(' ',$sql)[0]) != 0)
+    		{
+    			$this->do_resets($sql);
+    		}
+    		//if this was a select query, cache the results
+    		else{
+    			$result = $this->resourceToArray($result);
+				if($this->mcdflag)
+					$this->mc->set($hash,$result, time() + $ttl);
+				else
+					$this->mc->set($hash,$result, MEMCACHE_COMPRESSED, time() + $ttl);
+				
+				if($this->mcdflag && $this->mc->getResultCode())
+					$this->errorHandle('Memcached Set Error: '.$this->mc->getResultCode());
+					
+				$this->table_cache($hash, $sql);
+    		}
     	}
     	
     	return $result;
@@ -130,19 +147,64 @@ class DB
     private function resourceToArray($res)
     {
         $return = array();
-        while($obj = mysql_fetch_object($res))
+        while($obj = $res->fetch_object())
             $return[] = $obj;
         
         return $return;
     }
     
+    private function table_cache($hash, $sql)
+    {
+    	//get all tables used in the query
+    	$res = $this->db->query('EXPLAIN '.$sql);
+    	while($row = $res->fetch_object())
+    	{
+    		//for each table used, add mc entry for the SQL hash
+    		$table = md5('IDX_'.$row->table);
+    		$cache = $this->mc->get($table);
+    		if(!$cache || !in_array ($hash, $cache))
+    		{
+    			$this->debugger('table_cache','adding hash '.$hash.' to table '.$row->table);
+    			$cache[] = $hash;
+           	 	if($this->mcdflag)
+                	$this->mc->set($table,$cache, 0);
+    			else
+                	$this->mc->set($table,$cache, MEMCACHE_COMPRESSED, 0);
+    		}	
+    	}
+    }
+    
+    private function do_resets($sql)
+    {
+    	
+    	$type = strtoupper(explode(' ',$sql)[0]);
+    	$matches=array();
+    	switch($type)
+    	{
+    		case 'INSERT': preg_match ( '/INSERT INTO `?(\w+)`?.*/i',$sql,$matches); break;
+    		case 'UPDATE': preg_match ( '/UPDATE `?(\w+)`?.*/i',$sql,$matches); break;
+    		case 'DELETE': preg_match ( '/DELETE FROM `?(\w+)`?.*/i',$sql,$matches); break;
+    		default: return; break;
+    	}
+
+		//for each table used, find all SQLs which use that table and expire their entries
+		$table = md5('IDX_'.$matches[1]);
+		foreach( $this->mc->get($table) as $hash )
+		{
+			$this->debugger('do_resets','Resetting hash '.$hash.' for table '.$row->table);
+			$this->mc->delete($hash);
+		}
+    	
+    }
+    
 	public function db_get_insert_id()
 	{
-		$this->debugger('db_get_insert_id','');
+
 		
-		$id = mysql_insert_id();
-		if(mysql_error())
-			echo $this->errorHandle('SQL Error:<br/>'."\t".mysql_error());
+		$id = $this->db->insert_id;
+		$this->debugger('db_get_insert_id',$id);
+		if($this->db->errno)
+			echo $this->errorHandle('SQL Error:<br/>'."\tError #".$this->db->errno." - ".$this->db->error);
 		
 		return $id;
 	}
@@ -176,9 +238,9 @@ class DB
         exit();
     }
 
-    public function sanitize($input)
+    private function sanitize($input)
     {
-        $clean_input = mysql_real_escape_string($input);
+        $clean_input = $this->db->real_escape_string($input);
         $this->debugger('sanitize','clean: '.$clean_input);
         return $clean_input;
     }
