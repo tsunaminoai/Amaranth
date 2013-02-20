@@ -1,10 +1,10 @@
 <?php
 /* database connection information */
 
-$CONFIG['db']['db_host'] = localhost; //hostname
-$CONFIG['db']['db_user'] = amaranth; //username
-$CONFIG['db']['db_pass'] = magnolia; //password
-$CONFIG['db']['db_name'] = amaranth; //name of database to use
+$CONFIG['db']['db_host'] = 'localhost'; //hostname
+$CONFIG['db']['db_user'] = 'amaranth'; //username
+$CONFIG['db']['db_pass'] = 'magnolia'; //password
+$CONFIG['db']['db_name'] = 'amaranth'; //name of database to use
 
 /* memcached connection information */
 $CONFIG['memcached']['host'] = '127.0.0.1'; //host for memcached server

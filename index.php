@@ -1,15 +1,22 @@
 <?php
-ini_set('error_reporting', E_ALL ^ E_NOTICE);
+ini_set('error_reporting', E_ALL );
+//ini_set('error_reporting', false );
 ini_set('display_errors',true);
+
 
 require('./classes/debug.class.php');
 require('./config.php');
 require('./classes/db.class.php');
 
-$debug = new debug(DEBUG);
-set_error_handler ( array(&$debug,'errorHandle') );
+$debug = new debug(U_DEBUG);
 $debug->setLogFile('./log');
-$db = new DB($CONFIG['db'],$CONFIG['debug'],$CONFIG['memcached']);
+
+try{
+    $db = new DB($CONFIG['db'],$debug,$CONFIG['memcached']);
+}catch(Exception $e)
+{
+    $debug->trace($e);
+}
 
 $res = $db->doquery('select * from user',30);
 foreach ($res as $obj)

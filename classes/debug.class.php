@@ -1,21 +1,23 @@
 <?php
-define( 'DEBUG',0);
-define( 'NOTICE',1);
-define( 'WARNING',2);
-define( 'ERROR', 3);
-define( 'OFF', 4);
+define( 'OFF',     10);
+define( 'U_DEBUG',  1);
+define( 'U_NOTICE', 2);
+define( 'U_WARNING',3);
+define( 'U_ERROR',  4);
+define( 'U_FATAL',100);
 
-class debug extends Exception{
 
-	private $level=4;
+class debug{
+
+	private $level=0;
 	private $logfile;
 	
 	public function __construct($loglevel=4)
 	{
 		$this->level = $loglevel;
 		
-		set_error_handler(array(&$this,'errorHandle'));
-		set_exception_handler(array(&$this,'exHandle'));
+		set_error_handler(array($this,'errorHandle'));
+		set_exception_handler(array($this,'exHandle'));
 		
 	}
 	
@@ -33,12 +35,30 @@ class debug extends Exception{
 		
 	}
 	
-	private function report($message)
+    public function log($class,$func,$message,$level=U_DEBUG)
+    {
+        $pre='';
+        switch($level)
+        {
+            case U_DEBUG:   $pre = '[DEBUG]';   break;
+            case U_NOTICE:  $pre = '[NOTICE]';  break;
+            case U_ERROR:   $pre = '[ERROR]';   break;
+            case U_WARNING: $pre = '[WARNING]'; break;
+            case U_FATAL:   $pre = '[FATAL]';   break;
+            default:        $pre = '[UNKNOWN]'; break;
+        }
+        $this->report($pre.' '.$class.':'.$func."\t".$message."\n",$level);
+    }
+    
+	private function report($message,$level)
 	{
-		if($this->logfile)
-			fwrite($this->logfile,date('Ymd [H:s:u]').' :: '.$message) or die('Cannot write to file');
-		else
-			echo $message;
+        if( $level >= $this->level)
+        {
+            if($this->logfile)
+                fwrite($this->logfile,date('ymd [H:i:s]').' :: '.strip_tags($message)) or die('Cannot write to logfile');
+            else
+                echo '<pre>'.$message.'</pre>';
+        }
 	}
 	
 	public function errorHandle($errno, $errstr, $errfile, $errline)
@@ -46,43 +66,58 @@ class debug extends Exception{
 		if (!(error_reporting() & $errno)) {
         	return;
     	}
-    	    	
+    	 
+        $err = '';
     	switch ($errno) {
+        case E_RECOVERABLE_ERROR:
 		case E_USER_ERROR:
 		case E_ERROR:
-			$err += "<b>ERROR</b> [$errno] $errstr<br />\n";
-			$err += "  Fatal error  @ $errfile:$errline";
-			$err += ", PHP " . PHP_VERSION . " (" . PHP_OS . ")<br />\n";
-			$err += "Aborting...<br />\n";
-			$this->report($err);
+			$err .= "<b>ERROR</b> [$errno] $errstr<br />\n";
+			$err .= "  Fatal error  @ $errfile:$errline";
+			$err .= ", PHP " . PHP_VERSION . " (" . PHP_OS . ")<br />\n";
+			$err .= "Aborting...<br />\n";
+			$this->report($err,$errno);
 			exit(1);
 			break;
 	
 		case E_USER_WARNING:
 		case E_WARNING:
-			$err += "<b>WARNING</b> [$errno] $errstr @ $errfile:$errline<br />\n";
-			$this->report($err);
+			$err .= "<b>WARNING</b> [$errno] $errstr @ $errfile:$errline<br />\n";
+			$this->report($err,$errno);
 			break;
 		
 		case E_USER_NOTICE:
 		case E_NOTICE:
-			$err += "<b>NOTICE</b> [$errno] $errstr @ $errfile:$errline<br />\n";
-			$this->report($err);
+			$err .= "<b>NOTICE</b> [$errno] $errstr @ $errfile:$errline<br />\n";
+			$this->report($err,$errno);
 			break;
 	
 		default:
-			$err += "Unknown error type: [$errno] $errstr @ $errfile:$errline<br />\n";
-			$this->report($err);
+			$err .= "Unknown error type: [$errno] $errstr @ $errfile:$errline<br />\n";
+			$this->report($err,$errno);
 			break;
 		}
 	
 		return true;
 	}
 	
-	public function exHandle()
+	public function exHandle($e)
 	{
-	
+        $this->trace($e);
 	}
+    
+    public function trace($e)
+    {
+        while ($e->getPrevious() != NULL) {$e = $e->getPrevious();}
+        $err = '<b>ERROR</b> '.$e->getMessage();
+        $err .= ' @ '.$e->getFile().':'.$e->getLine();
+        $err .= "<br/>\n";
+        $err .= "Stack Trace<br/>\n";
+        $err .= $e->getTraceAsString();
+        $this->report($err,$e->getCode(),$e->getCode());
+        if($e->getCode() == U_FATAL)
+            die('<pre>'.$e->getMessage().'<br/>Aborting...</pre>');
+    }
 }
 
 ?>

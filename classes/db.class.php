@@ -2,7 +2,7 @@
 
 class DB
 {
-	private $debug = false;
+	private $debug;
 	
 	private $db_host;
 	private $db_user;
@@ -17,7 +17,7 @@ class DB
     
     private $query_num = 0;
     
-	public function __construct($connectinfo,$conndebug=false,$connmemcached=null)
+	public function __construct($connectinfo,$conndebug=null,$connmemcached=null)
 	{
 		$this->db_host = $connectinfo['db_host'];
 		$this->db_user = $connectinfo['db_user'];
@@ -27,11 +27,15 @@ class DB
 		$this->mc_port = $connmemcached['port'];
 		
 		if($conndebug)
-			$this->debugOn();
+			$this->debug = $conndebug;
 		
-		$this->db_connect();
-		
-		$this->mc_connect();
+		try{$this->db_connect();}
+        catch(Exception $e)
+        {   throw new Exception('Database connection failed',U_FATAL,$e);}
+        
+		try{$this->mc_connect();}
+        catch(Exception $e)
+        {   throw new Exception('Memcache connection failed',U_FATAL,$e);}
         
 		$this->time_start = $this->getPageTime();
 	}
@@ -40,24 +44,25 @@ class DB
 	{
 		if($this->mc_host && $this->mc_port)
 		{
-			$this->debugger('mc_connect','host: '.$this->mc_host.':'.$this->mc_port);
+			$this->log(__FUNCTION__ , 'host: '.$this->mc_host.':'.$this->mc_port,U_DEBUG);
 			
 			if (extension_loaded('memcached'))
 			{
 				$this->mc = new Memcached();
-				if(!$this->mc->addServer($this->mc_host,$this->mc_port))
-					$this->errorHandle('Could not connect to memcached server: '.$this->mc_host.' '.$this->mc_port);
+                if(!$this->mc->addServer($this->mc_host,$this->mc_port))
+                    throw new Exception('Could not connect to memcached server: '.$this->mc_host.' '.$this->mc_port,U_FATAL);
                 
                 $this->mcdflag = true;
 			}
 			else if (extension_loaded('memcache'))
 			{
 				$this->mc = new Memcache();
-				$this->mc->connect($this->mc_host,$this->mc_port);
+				if(!$this->mc->connect($this->mc_host,$this->mc_port))
+                    throw new Exception('Could not connect to memcache server: '.$this->mc_host.' '.$this->mc_port,U_FATAL);
                 $this->mcdflag = false;
 			}	
 			else
-				$this->errorHandle("Could not find any memcache module!");
+                throw new Exception('Could not find memcahe or memcached modules, but config is set',U_FATAL);
 		}
 	}
 	
@@ -68,16 +73,14 @@ class DB
 
 	private function db_connect()
 	{
-		$this->debugger('db_connect','host: '.$this->db_host);
+		$this->log(__FUNCTION__ , 'host: '.$this->db_host);
 
 		$this->db = new mysqli($this->db_host,$this->db_user,$this->db_pass, $this->db_name);
+
 		if($this->db->connect_errno)
-			echo $this->errorHandle('DB Connection Error:<br/>'."\t".$db->connect_error);
+			throw new Exception('DB Connection Error: '.$this->db->connect_error,U_FATAL);
 	
 		$this->db->autocommit(TRUE);
-		
-		$this->debugger('db_connect','db: '.$this->db->host_info);
-
 	}
 
 	private function db_disconnect()
@@ -87,15 +90,15 @@ class DB
 
 	private function db_query($query)
 	{
-		$this->debugger('db_query','sql: '.$query);
+		$this->log(__FUNCTION__ , 'sql: '.$query);
 
 		$res = $this->db->query($query);
 
-		$this->debugger('db_query','Result: '.$this->db->sqlstate);
-		$this->debugger('db_query','Info: '.$this->db->info);
+		$this->log(__FUNCTION__ , 'Result: '.$this->db->sqlstate);
+		$this->log(__FUNCTION__ ,'Info: '.$this->db->info);
 		
 		if($this->db->errno)
-			echo $this->errorHandle('SQL Error:<br/>'."\t".$query.'<br/><br/>'."\tError #".$this->db->errno." - ".$this->db->error);
+			throw new Exception('SQL Error:<br/>'."\t".$query.'<br/><br/>'."\tError #".$this->db->errno." - ".$this->db->error, U_FATAL);
 			
 		return $res;
 	}
@@ -104,42 +107,48 @@ class DB
     {
     	$sql = $this->sanitize($sql);
     	//if there is no memcached server, default to being a wrapper
-    	if(!$this->mc)
-    		return $this->db_query($sql);
-    	
+    	if(!$this->mc){
+    		try{ $this->db_query($sql);}
+            catch(Exception $e){ throw new Exception('Could not query',U_FATAL,$e); } 
+    	}
     	//get the cached query result
     	$hash = md5($sql);
     	$result = $this->mc->get($hash);
-    	$this->debugger('mc_query','Query: '.$sql);
-    	$this->debugger('mc_query','Hash: '.$hash);
-    	$this->debugger('mc_query','Found: '.($result?'yes':'no'));
+    	$this->log(__FUNCTION__ , 'Query: '.$sql);
+    	$this->log(__FUNCTION__ , 'Hash: '.$hash);
+    	$this->log(__FUNCTION__ , 'Found: '.($result?'yes':'no'));
     	//if the get() is not "not found" or "success" throw error
     	if($this->mcdflag && ($ret = $this->mc->getResultCode()) != 0 && $ret != 16 )
-    		$this->errorHandle('Memcached Get Error: '.$this->mc->getResultCode());
+    		throw new Exception('Memcached Get Error: '.$this->mc->getResultCode(),U_ERROR);
     	
     	//if there is no result, make one and cache it
     	if(!$result)
     	{
-    		$result = $this->db_query($sql);
-    		//if this was an modification query, do resets
-            $type = explode(' ',$sql);
-    		if(strcasecmp('SELECT',$type[0]) != 0)
-    		{
-    			$this->do_resets($sql);
-    		}
-    		//if this was a select query, cache the results
-    		else{
-    			$result = $this->resourceToArray($result);
-				if($this->mcdflag)
-					$this->mc->set($hash,$result, time() + $ttl);
-				else
-					$this->mc->set($hash,$result, MEMCACHE_COMPRESSED, time() + $ttl);
-				
-				if($this->mcdflag && $this->mc->getResultCode())
-					$this->errorHandle('Memcached Set Error: '.$this->mc->getResultCode());
-					
-				$this->table_cache($hash, $sql);
-    		}
+    		try{
+                $result = $this->db_query($sql);
+                //if this was an modification query, do resets
+                $type = explode(' ',$sql);
+                if(strcasecmp('SELECT',$type[0]) != 0)
+                {
+                    $this->do_resets($sql);
+                }
+                //if this was a select query, cache the results
+                else{
+                    $result = $this->resourceToArray($result);
+                    if($this->mcdflag)
+                        $this->mc->set($hash,$result, time() + $ttl);
+                    else
+                        $this->mc->set($hash,$result, MEMCACHE_COMPRESSED, time() + $ttl);
+                    
+                    if($this->mcdflag && $this->mc->getResultCode())
+                        throw new Exception('Memcached Set Error: '.$this->mc->getResultCode(),U_ERROR);
+                        
+                    $this->table_cache($hash, $sql);
+                }
+            }catch(Exception $e)
+            {
+                throw new Exception('Could not make and cache query',U_FATAL,$e);
+            }
     	}
     	
     	return $result;
@@ -165,7 +174,7 @@ class DB
     		$cache = $this->mc->get($table);
     		if(!$cache || !in_array ($hash, $cache))
     		{
-    			$this->debugger('table_cache','adding hash '.$hash.' to table '.$row->table);
+    			$this->log(__FUNCTION__ ,'adding hash '.$hash.' to table '.$row->table);
     			$cache[] = $hash;
            	 	if($this->mcdflag)
                 	$this->mc->set($table,$cache, 0);
@@ -192,7 +201,7 @@ class DB
 		$table = md5('IDX_'.$matches[1]);
 		foreach( $this->mc->get($table) as $hash )
 		{
-			$this->debugger('do_resets','Resetting hash '.$hash.' for table '.$row->table);
+			$this->log(__FUNCTION__ , 'Resetting hash '.$hash.' for table '.$row->table);
 			$this->mc->delete($hash);
 		}
     	
@@ -203,9 +212,9 @@ class DB
 
 		
 		$id = $this->db->insert_id;
-		$this->debugger('db_get_insert_id',$id);
+		$this->log(__FUNCTION__ , $id);
 		if($this->db->errno)
-			echo $this->errorHandle('SQL Error:<br/>'."\tError #".$this->db->errno." - ".$this->db->error);
+			throw new Exception('SQL Error:<br/>'."Error #".$this->db->errno." - ".$this->db->error,U_FATAL);
 		
 		return $id;
 	}
@@ -214,35 +223,11 @@ class DB
 	{
 		return $this->query_num;
 	}
-	
-	private function debugOn()
-	{
-		$this->debug = true;
-	}
-    
-    private function debugger($func,$msg)
-    {
-            if($this->debug === true)
-            {
-                    echo '<pre>';
-                    echo '<b>'.$func.'</b>'."\t";
-                    echo $msg;
-                    echo '</pre>';
-            }
-    }
-
-    private function errorHandle($err)
-    {
-            echo '<pre>';
-            echo '<b>Fatal Error: </b>'.$err;
-            echo '</pre>';
-        exit();
-    }
 
     private function sanitize($input)
     {
         $clean_input = $this->db->real_escape_string($input);
-        $this->debugger('sanitize','clean: '.$clean_input);
+        $this->log(__FUNCTION__ , 'clean: '.$clean_input);
         return $clean_input;
     }
 
@@ -254,5 +239,10 @@ class DB
                 return $time;
     }
 
+    private function log($func,$message,$level=U_DEBUG)
+    {
+        if($this->debug)
+            $this->debug->log(__CLASS__ , $func,$message,$level);
+    }
 
 }
