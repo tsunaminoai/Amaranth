@@ -22,7 +22,6 @@ $res = $db->doquery('select * from user',30);
 foreach ($res as $obj)
     echo 'User: '.$obj->user_id.'<br/>';
 
-$cheese;
 //$db->doquery('insert into user values ();');
 //$db->doquery('delete from user where user_id != 1;');
 ?>
