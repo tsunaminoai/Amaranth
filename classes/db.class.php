@@ -122,7 +122,8 @@ class DB
     	{
     		$result = $this->db_query($sql);
     		//if this was an modification query, do resets
-    		if(strcasecmp('SELECT',explode(' ',$sql)[0]) != 0)
+            $type = explode(' ',$sql);
+    		if(strcasecmp('SELECT',$type[0]) != 0)
     		{
     			$this->do_resets($sql);
     		}
@@ -176,8 +177,8 @@ class DB
     
     private function do_resets($sql)
     {
-    	
-    	$type = strtoupper(explode(' ',$sql)[0]);
+    	$type = explode(' ',$sql);
+    	$type = strtoupper($type[0]);
     	$matches=array();
     	switch($type)
     	{
