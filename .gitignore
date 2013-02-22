@@ -1,3 +1,4 @@
 config.php
 log*
 *.bak
+dev_utils*
