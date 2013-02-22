@@ -105,7 +105,6 @@ class DB
 	
     public function doquery($sql,$ttl=30)
     {
-    	$sql = $this->sanitize($sql);
     	//if there is no memcached server, default to being a wrapper
     	if(!$this->mc){
     		try{ $this->db_query($sql);}
@@ -224,7 +223,7 @@ class DB
 		return $this->query_num;
 	}
 
-    private function sanitize($input)
+    public function sanitize($input)
     {
         $clean_input = $this->db->real_escape_string($input);
         $this->log(__FUNCTION__ , 'clean: '.$clean_input);
