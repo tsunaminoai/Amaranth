@@ -24,9 +24,9 @@ try{
     $debug->trace($e);
 }
 
-$res = $db->doquery('select * from user',30);
-foreach ($res as $obj)
-    echo 'User: '.$obj->sak_user.'<br/>';
+$user = new User($db);
+$user->loadUser(1);
+echo $user->getUsername();
 
 //$db->doquery('insert into user values ();');
 //$db->doquery('delete from user where user_id != 1;');
