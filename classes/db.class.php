@@ -27,8 +27,7 @@ class DB
 		$this->mc_host = config_get('memcached','host');
 		$this->mc_port = config_get('memcached','port');
 		
-		if(config_get('debug'))
-			$this->debug = $conndebug;
+		$this->debug = Debug::getDebugger();
 		
 		try{$this->db_connect();}
         catch(Exception $e)
@@ -41,7 +40,7 @@ class DB
 		$this->time_start = $this->getPageTime();
 	}
 	
-	public function getConnection()
+	public static function getConnection()
 	{
 		static $dbConn = null;
 		if($dbConn === null)

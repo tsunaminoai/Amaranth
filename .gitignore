@@ -1,4 +1,4 @@
 config.php
-log*
+*.log
 *.bak
 dev_utils*

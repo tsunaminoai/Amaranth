@@ -3,18 +3,17 @@ ini_set('error_reporting', E_ALL );
 //ini_set('error_reporting', false );
 ini_set('display_errors',true);
 
-require('./config.php');
-global $CONFIG;
-
-$folders = array('classes','inc','lib');
+$folders = array('inc','classes','lib');
 foreach ($folders as $folder)
 {
 	foreach (glob($folder.'/*.php') as $filename)
 		include_once( $filename );
 }
 
+require_once('./config.php');
+global $CONFIG;
 
-$debug = new debug(U_DEBUG);
+Debug::getDebugger(U_DEBUG);
 
 try{
     DB::getConnection();

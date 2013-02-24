@@ -1,26 +1,38 @@
 <?php
 
-class debug{
+class Debug{
 
 	private $level=0;
 	private $logfile;
 	
-	public function __construct($loglevel=U_ERROR)
+	private function __construct()
 	{
-		$this->level = $loglevel;
 		
-		$this->setLogFile(config_get('debug','logfile'));
+		$this->setLogFile();
 		
 		set_error_handler(array($this,'errorHandle'));
 		set_exception_handler(array($this,'exHandle'));
 		
 	}
 	
-	private function setLogFile($logfile)
+	public static function getDebugger()
 	{
+		static $debugger = null;
+		if($debugger === null)
+		{
+			$debugger = new Debug();
+		}
+		return $debugger;
+	}
+	
+	private function setLogFile()
+	{
+		$logfile = config_get('logging','logfile');
+		$this->leve = config_get('logging','level');
+		
 		if(!$logfile)
 			$logfile = '/dev/null';
-			
+		
 		try
 		{
 			if(($this->logfile = fopen($logfile,'a')) === FALSE)

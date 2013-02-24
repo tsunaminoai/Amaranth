@@ -11,6 +11,14 @@ $CONFIG['memcached']['host'] = '127.0.0.1'; //host for memcached server
 $CONFIG['memcached']['port'] = 11211; //port of memcached server
 
 
-/* Options */
-$CONFIG['debug'] = false; //turn debugging on and off
+/* Logging */
+/* Valid levels are:
+	U_OFF	
+	U_ERROR
+	U_WARNING
+	U_NOTICE
+	U_DEBUG
+*/
+$CONFIG['logging']['level'] = U_OFF; //change logging level
+$CONFIG['logging']['logfile'] = 'amaranth.log'; //turn debugging on and off
 ?>
