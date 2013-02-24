@@ -19,14 +19,14 @@ class DB
     
 	public function __construct($connectinfo,$conndebug=null,$connmemcached=null)
 	{
-		$this->db_host = $connectinfo['db_host'];
-		$this->db_user = $connectinfo['db_user'];
-		$this->db_pass = $connectinfo['db_pass'];
-		$this->db_name = $connectinfo['db_name'];
-		$this->mc_host = $connmemcached['host'];
-		$this->mc_port = $connmemcached['port'];
+		$this->db_host = config_get('db','db_host');
+		$this->db_user = config_get('db','db_user');
+		$this->db_pass = config_get('db','db_pass');
+		$this->db_name = config_get('db','db_name');
+		$this->mc_host = config_get('memcached','host');
+		$this->mc_port = config_get('memcached','port');
 		
-		if($conndebug)
+		if(config_get('debug'))
 			$this->debug = $conndebug;
 		
 		try{$this->db_connect();}

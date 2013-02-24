@@ -5,17 +5,22 @@ class debug{
 	private $level=0;
 	private $logfile;
 	
-	public function __construct($loglevel=4)
+	public function __construct($loglevel=U_ERROR)
 	{
 		$this->level = $loglevel;
+		
+		$this->setLogFile(config_get('debug','logfile'));
 		
 		set_error_handler(array($this,'errorHandle'));
 		set_exception_handler(array($this,'exHandle'));
 		
 	}
 	
-	public function setLogFile($logfile)
+	private function setLogFile($logfile)
 	{
+		if(!$logfile)
+			$logfile = '/dev/null';
+			
 		try
 		{
 			if(($this->logfile = fopen($logfile,'a')) === FALSE)

@@ -4,18 +4,17 @@ ini_set('error_reporting', E_ALL );
 ini_set('display_errors',true);
 
 require('./config.php');
+global $CONFIG;
 
-foreach (glob('classes/*.php') as $filename)
+$folders = array('classes','inc','lib');
+foreach ($folders as $folder)
 {
-    include_once( $filename );
+	foreach (glob($folder.'/*.php') as $filename)
+		include_once( $filename );
 }
-foreach (glob('inc/*.php') as $filename)
-{
-    include_once( $filename );
-}
+
 
 $debug = new debug(U_DEBUG);
-$debug->setLogFile('./log');
 
 try{
     $db = new DB($CONFIG['db'],$debug,$CONFIG['memcached']);
