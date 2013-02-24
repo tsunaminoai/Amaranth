@@ -7,12 +7,9 @@ class User
     
     protected $db;
     
-    public function __construct($dblink)
+    public function __construct()
     {
-        if(!$dblink)
-            throw new Exception('No DB link provided!',U_ERROR);
-            
-        $this->db = $dblink;
+		$this->db = DB::getConnection();
         return;
     }
 

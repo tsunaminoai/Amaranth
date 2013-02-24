@@ -17,7 +17,8 @@ class DB
     
     private $query_num = 0;
     
-	public function __construct($connectinfo,$conndebug=null,$connmemcached=null)
+    
+	private function __construct()
 	{
 		$this->db_host = config_get('db','db_host');
 		$this->db_user = config_get('db','db_user');
@@ -39,6 +40,16 @@ class DB
         
 		$this->time_start = $this->getPageTime();
 	}
+	
+	public function getConnection()
+	{
+		static $dbConn = null;
+		if($dbConn === null)
+		{
+			$dbConn = new DB();
+		}
+		return $dbConn;
+	}	
 	
 	private function mc_connect()
 	{

@@ -17,13 +17,13 @@ foreach ($folders as $folder)
 $debug = new debug(U_DEBUG);
 
 try{
-    $db = new DB($CONFIG['db'],$debug,$CONFIG['memcached']);
+    DB::getConnection();
 }catch(Exception $e)
 {
     $debug->trace($e);
 }
 
-$user = new User($db);
+$user = new User();
 $user->loadUser(1);
 echo $user->getUsername();
 
