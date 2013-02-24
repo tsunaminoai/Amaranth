@@ -13,6 +13,7 @@ class User
         return;
     }
 
+			$this->doLogin();
     private function getLoadUserSQL($sak_user)
     {
         $sak_user = $this->db->sanitize($sak_user);

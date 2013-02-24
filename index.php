@@ -13,9 +13,9 @@ foreach ($folders as $folder)
 require_once('./config.php');
 global $CONFIG;
 
-Debug::getDebugger(U_DEBUG);
 
 try{
+	Debug::getDebugger(U_DEBUG);
     DB::getConnection();
 }catch(Exception $e)
 {
@@ -23,9 +23,7 @@ try{
 }
 
 $user = new User();
-$user->loadUser(1);
-echo $user->getUsername();
+$user->checkLogin();
 
-//$db->doquery('insert into user values ();');
-//$db->doquery('delete from user where user_id != 1;');
+
 ?>
