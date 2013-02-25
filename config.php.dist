@@ -9,7 +9,7 @@ $CONFIG['db']['db_name'] = 'amaranth'; //name of database to use
 /* memcached connection information */
 $CONFIG['memcached']['host'] = '127.0.0.1'; //host for memcached server
 $CONFIG['memcached']['port'] = 11211; //port of memcached server
-
+$CONFIG['memcached']['ttl'] = 30; //default TTL for memcached entries
 
 /* Logging */
 /* Valid levels are:

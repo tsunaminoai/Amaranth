@@ -112,7 +112,7 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 -- -----------------------------------------------------
 START TRANSACTION;
 USE `amaranth`;
-INSERT INTO `amaranth`.`user` (`sak_user`, `user_name`, `password`, `email`, `active`, `dte_join`) VALUES (1, 'admin', '456b7016a916a4b178dd72b947c152b7', ' ', 'Y', ' ');
+INSERT INTO `amaranth`.`user` (`sak_user`, `user_name`, `password`, `email`, `active`, `dte_join`) VALUES (1, 'admin', '21232f297a57a5a743894a0e4a801fc3', ' ', 'Y', ' ');
 
 COMMIT;
 

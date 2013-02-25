@@ -13,6 +13,7 @@ foreach ($folders as $folder)
 require_once('./config.php');
 global $CONFIG;
 
+Session::startSession();
 
 try{
 	Debug::getDebugger(U_DEBUG);
@@ -22,8 +23,10 @@ try{
     $debug->trace($e);
 }
 
+
 $user = new User();
 $user->checkLogin();
 
+Action::handleAction($_GET['action'],$_POST);
 
 ?>

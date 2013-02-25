@@ -3,19 +3,28 @@
 class Session
 {
 
-	public function __construct()
+	private function __construct()
 	{
 		session_start();
 	}
 	
-	public function setLogin(User $user)
+	public static function startSession()
 	{
-		
+		static $init = null;
+		if( $init === null)
+			$init = new Session();
+		return $init;
+	}
+	public static function setLogin(User $user)
+	{
+		$_SESSION['sak_user'] = $user->getSakUser();
+		$_SESSION['user_name'] = $user->getUsername();
+		$_SESSION['loggedIn'] = true;
 	}
 
-	public function getLogin()
+	public static function getLogin()
 	{
-		return $_SESSION['loggedIn'];
+		return isset($_SESSION['loggedIn']);
 	}
 	
 	public function __destruct()

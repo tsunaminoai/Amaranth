@@ -12,6 +12,7 @@ class DB
 	private $mc_port;
 	private $mc;
     private $mcdflag;
+    private $ttl;
     
     private $db;
     
@@ -26,6 +27,7 @@ class DB
 		$this->db_name = config_get('db','db_name');
 		$this->mc_host = config_get('memcached','host');
 		$this->mc_port = config_get('memcached','port');
+		$this->ttl = config_get('memcached','ttl');
 		
 		$this->debug = Debug::getDebugger();
 		
@@ -113,13 +115,17 @@ class DB
 		return $res;
 	}
 	
-    public function doquery($sql,$ttl=30)
+    public function doquery($sql,$ttl=null)
     {
     	//if there is no memcached server, default to being a wrapper
     	if(!$this->mc){
     		try{ $this->db_query($sql);}
             catch(Exception $e){ throw new Exception('Could not query',U_FATAL,$e); } 
     	}
+    	
+    	if($ttl === null)
+    		$ttl = $this->ttl;
+    		
     	//get the cached query result
     	$hash = md5($sql);
     	$result = $this->mc->get($hash);
@@ -148,7 +154,7 @@ class DB
                         $this->mc->set($hash,$result, time() + $ttl);
                     else
                         $this->mc->set($hash,$result, MEMCACHE_COMPRESSED, time() + $ttl);
-                    
+
                     if($this->mcdflag && $this->mc->getResultCode())
                         throw new Exception('Memcached Set Error: '.$this->mc->getResultCode(),U_ERROR);
                         
