@@ -27,6 +27,11 @@ class Session
 		return isset($_SESSION['loggedIn']);
 	}
 	
+	public static function destroySession()
+	{
+		session_destroy();
+	}
+	
 	public function __destruct()
 	{
 	}

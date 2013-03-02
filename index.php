@@ -20,7 +20,7 @@ Session::startSession();
 
 try{
 	$d = Debug::getDebugger(U_DEBUG);
-    DB::getConnection();
+    $db = DB::getConnection();
 }catch(Exception $e)
 {
     $d->trace($e);
@@ -32,4 +32,5 @@ $siteUser->checkLogin();
 
 Action::handleAction($_GET['action'],$_POST);
 
+$db->db_disconnect();
 ?>

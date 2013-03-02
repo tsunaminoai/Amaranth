@@ -10,13 +10,13 @@ class DB
 	private $db_name;
 	private $mc_host;
 	private $mc_port;
-	private $mc;
-    private $mcdflag;
-    private $ttl;
+	private static $mc;
+    private static $mcdflag;
+    private static $ttl;
     
-    private $db;
+    private static $db;
     
-    private $query_num = 0;
+    private static $query_num = 0;
     
     
 	private function __construct()
@@ -83,10 +83,6 @@ class DB
 		return array($this->mc,$this->mcdflag);
 	}
 	
-	public function __destruct()
-	{
-		$this->db_disconnect();
-	}
 
 	private function db_connect()
 	{
@@ -100,10 +96,11 @@ class DB
 		$this->db->autocommit(TRUE);
 	}
 
-	private function db_disconnect()
+	public function db_disconnect()
 	{
 		$this->db->close();
 	}
+
 
 	private function db_query($query)
 	{

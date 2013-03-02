@@ -3,11 +3,12 @@
 class Login extends User
 {
 
-	public function __contruct()
+	public function __construct()
 	{
 		parent::__construct();
-		
-		Action::addAction('processLogin',array($this,'processLogin'));		
+
+		Action::addAction('processLogin',array($this,'processLogin'));
+		Action::addAction('processLogout',array($this,'processLogout'));		
 	}
 	
 	public function checkLogin()
@@ -20,6 +21,7 @@ class Login extends User
 		{
 			$this->_mc_set();
 			$test = $this->_mc_get();
+			echo '<a href="?action=processLogout">Logout</a>';
 		}
 	}
 
@@ -36,7 +38,7 @@ class Login extends User
     {
     	$sql = 'select 	sak_user
     			from	user
-    			where	user_name = "'.$this->db->sanitize($_POST['login_username']).'"
+    			where	user_name = "'.$this->_db->sanitize($_POST['login_username']).'"
     			and		password = "'.md5($_POST['login_password']).'"
     			;';
     	$res = $this->_db->doquery($sql);
@@ -44,6 +46,11 @@ class Login extends User
     		$this->loadUser($res[0]->sak_user);
     	
     	Session::setLogin($this);
+    }
+    
+    public function processLogout($args=array())
+    {
+	    Session::destroySession();
     }
 
 }

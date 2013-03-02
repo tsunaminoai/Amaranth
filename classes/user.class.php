@@ -14,8 +14,6 @@ class User extends Memcached_Class
 		$this->_db = DB::getConnection();
 		$this->_debug = Debug::getDebugger();
 		
-		Action::addAction('processLogin',array($this,'processLogin'));
-        return;
     }
 
 	public function checkLogin()
@@ -33,7 +31,7 @@ class User extends Memcached_Class
 
     private function _getLoadUserSQL($sak_user)
     {
-        $sak_user = $this->db->sanitize($sak_user);
+        $sak_user = $this->_db->sanitize($sak_user);
         $sql = 'select sak_user, user_name from user where sak_user = '.$sak_user;
         return $sql;
     }
@@ -65,19 +63,6 @@ class User extends Memcached_Class
     		</form>';
     }
     
-    public function processLogin($args=array())
-    {
-    	$sql = 'select 	sak_user
-    			from	user
-    			where	user_name = "'.$this->db->sanitize($_POST['login_username']).'"
-    			and		password = "'.md5($_POST['login_password']).'"
-    			;';
-    	$res = $this->_db->doquery($sql);
-    	if($res)
-    		$this->loadUser($res[0]->sak_user);
-    	
-    	Session::setLogin($this);
-    }
     
     public function getUsername()
     {
