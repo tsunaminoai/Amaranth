@@ -27,10 +27,12 @@ try{
 }
 
 
+
 $siteUser = new Login();
 $siteUser->checkLogin();
 
 Action::handleAction($_GET['action'],$_POST);
+
 
 $db->db_disconnect();
 ?>

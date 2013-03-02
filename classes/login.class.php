@@ -15,7 +15,7 @@ class Login extends User
 	{
 		if(!Session::getLogin())
 		{
-			$this->doLogin();
+			$this->showForm();
 		}
 		else
 		{
@@ -25,7 +25,7 @@ class Login extends User
 		}
 	}
 
-    public function doLogin()
+    public function showForm()
     {
     	echo '<form action="?action=processLogin" method="post" id="login_form">
     		<input type="text" name="login_username" id="login_username" />
