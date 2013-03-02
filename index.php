@@ -6,7 +6,7 @@ ini_set('display_errors',true);
 spl_autoload_register(function ($class) {
     include 'classes/' . $class . '.class.php';});
 
-$folders = array('inc','classes','lib');
+$folders = array('inc','lib');
 foreach ($folders as $folder)
 {
 	foreach (glob($folder.'/*.php') as $filename)
