@@ -1,17 +1,18 @@
 <?php
 
-class User
+class User extends Memcached_Class
 {
-    private $_sak_user;
+    protected $_sak;
     private $_user_name;
     
-    protected $db;
-    protected $debug;
+    protected $_db;
+    protected $_debug;
     
     public function __construct()
     {
-		$this->db = DB::getConnection();
-		$this->debug = Debug::getDebugger();
+    	parent::__construct();
+		$this->_db = DB::getConnection();
+		$this->_debug = Debug::getDebugger();
 		
 		Action::addAction('processLogin',array($this,'processLogin'));
         return;
@@ -25,20 +26,22 @@ class User
 		}
 		else
 		{
-		
+			$this->_mc_set();
+			$test = $this->_mc_get();
 		}
 	}
 
-    private function getLoadUserSQL($sak_user)
+    private function _getLoadUserSQL($sak_user)
     {
         $sak_user = $this->db->sanitize($sak_user);
         $sql = 'select sak_user, user_name from user where sak_user = '.$sak_user;
         return $sql;
     }
+    
     public function loadUser($sak_user)
     {
-        $sql = $this->getLoadUserSQL($sak_user);
-        $res = $this->db->doquery($sql);
+        $sql = $this->_getLoadUserSQL($sak_user);
+        $res = $this->_db->doquery($sql);
         
         if( sizeof($res) > 1)
             throw new Exception('Too many rows returned. SAK_USER = '.$sak_user,U_ERROR);
@@ -47,7 +50,7 @@ class User
         
         $obj = array_pop($res);
         
-        $this->_sak_user = $obj->sak_user;
+        $this->_sak = $obj->sak_user;
         $this->_user_name = $obj->user_name;
         
 
@@ -69,7 +72,7 @@ class User
     			where	user_name = "'.$this->db->sanitize($_POST['login_username']).'"
     			and		password = "'.md5($_POST['login_password']).'"
     			;';
-    	$res = $this->db->doquery($sql);
+    	$res = $this->_db->doquery($sql);
     	if($res)
     		$this->loadUser($res[0]->sak_user);
     	
@@ -83,13 +86,13 @@ class User
     
     public function getSakUser()
     {
-        return $this->_sak_user;
+        return $this->_sak;
     }
     
-    private function log($func,$message,$level=U_DEBUG)
+    private function _log($func,$message,$level=U_DEBUG)
     {
-        if($this->debug)
-            $this->debug->log(__CLASS__ , $func,$message,$level);
+        if($this->_debug)
+            $this->_debug->log(__CLASS__ , $func,$message,$level);
     }
 }
 

@@ -78,6 +78,11 @@ class DB
 		}
 	}
 	
+	public function get_mc()
+	{
+		return array($this->mc,$this->mcdflag);
+	}
+	
 	public function __destruct()
 	{
 		$this->db_disconnect();

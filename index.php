@@ -16,11 +16,11 @@ global $CONFIG;
 Session::startSession();
 
 try{
-	Debug::getDebugger(U_DEBUG);
+	$d = Debug::getDebugger(U_DEBUG);
     DB::getConnection();
 }catch(Exception $e)
 {
-    $debug->trace($e);
+    $d->trace($e);
 }
 
 
