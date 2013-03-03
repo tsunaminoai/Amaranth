@@ -2,11 +2,9 @@
 
 class Login
 {
-	private $_db;
 
 	public function __construct()
 	{
-		$this->_db = DB::getConnection();
 		
 		Action::addAction('processLogin',array($this,'processLogin'));
 		Action::addAction('processLogout',array($this,'processLogout'));		
@@ -46,12 +44,14 @@ class Login
     
     public function processLogin($args=array())
     {
+		$db = DB::getConnection();
+		
     	$sql = 'select 	sak_user
     			from	user
-    			where	user_name = "'.$this->_db->sanitize($_POST['login_username']).'"
+    			where	user_name = "'.$db->sanitize($_POST['login_username']).'"
     			and		password = "'.md5($_POST['login_password']).'"
     			;';
-    	$res = $this->_db->doquery($sql);
+    	$res = $db->doquery($sql);
     	if($res)
     	{
 	    	$siteUser = new User($res[0]->sak_user);
