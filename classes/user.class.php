@@ -8,12 +8,18 @@ class User extends Memcached_Class
     protected $_db;
     protected $_debug;
     
-    public function __construct()
+    public function __construct($sak=null)
     {
     	parent::__construct();
+    	
+ 	
 		$this->_db = DB::getConnection();
 		$this->_debug = Debug::getDebugger();
 		
+		if($sak)
+		{
+			$this->loadUser($sak);
+		}
     }
 
 	public function checkLogin()

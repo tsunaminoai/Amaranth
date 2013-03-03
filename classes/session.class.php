@@ -27,9 +27,15 @@ class Session
 		return isset($_SESSION['loggedIn']);
 	}
 	
+	public static function getUserSak()
+	{
+		return $_SESSION['sak_user'];
+	}
+	
 	public static function destroySession()
 	{
 		session_destroy();
+		unset($_SESSION);
 	}
 	
 	public function __destruct()

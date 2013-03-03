@@ -26,10 +26,15 @@ try{
     $d->trace($e);
 }
 
+$login = new Login();
 
+if(in_array($_GET['Saction'],array('processLogin','processLogout')))
+	Action::handleAction($_GET['Saction'],$_POST);
 
-$siteUser = new Login();
-$siteUser->checkLogin();
+$siteUser = $login->checkLogin();
+
+if($siteUser)
+	$login->showLogoutForm();
 
 Action::handleAction($_GET['action'],$_POST);
 

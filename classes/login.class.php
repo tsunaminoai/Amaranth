@@ -1,12 +1,13 @@
 <?php
 
-class Login extends User
+class Login
 {
+	private $_db;
 
 	public function __construct()
 	{
-		parent::__construct();
-
+		$this->_db = DB::getConnection();
+		
 		Action::addAction('processLogin',array($this,'processLogin'));
 		Action::addAction('processLogout',array($this,'processLogout'));		
 	}
@@ -15,23 +16,32 @@ class Login extends User
 	{
 		if(!Session::getLogin())
 		{
-			$this->showForm();
+			$this->showLoginForm();
+			return false;
 		}
 		else
 		{
-			$this->_mc_set();
-			$test = $this->_mc_get();
-			echo '<a href="?action=processLogout">Logout</a>';
+			return new User(Session::getUserSak());
 		}
 	}
 
-    public function showForm()
+    public function showLoginForm()
     {
-    	echo '<form action="?action=processLogin" method="post" id="login_form">
-    		<input type="text" name="login_username" id="login_username" />
-    		<input type="password" name="login_password" id="login_password" />
-    		<input type="submit" name="login_submit" id="login_submit" />
-    		</form>';
+    	echo '<div id="login_form">';
+    	echo '<form action="?Saction=processLogin" method="post">
+    		  <input type="text" name="login_username" id="login_username" />
+    		  <input type="password" name="login_password" id="login_password" />
+    		  <input type="submit" name="login_submit" id="login_submit" />
+    		  </form>';
+    	echo '</div>';
+    }
+    
+    public function showLogoutForm()
+    {
+	    echo '<div id="logout_form">';
+	    echo '<a href="?Saction=processLogout">Logout</a>';
+	    echo '&nbsp;<a href="?Saction=words">test</a>';
+	    echo '</div>';
     }
     
     public function processLogin($args=array())
@@ -43,14 +53,22 @@ class Login extends User
     			;';
     	$res = $this->_db->doquery($sql);
     	if($res)
-    		$this->loadUser($res[0]->sak_user);
+    	{
+	    	$siteUser = new User($res[0]->sak_user);
+	    	Session::setLogin($siteUser);
+    	}else
+    	{
+	    	echo '<div id="login_error">';
+	    	echo 'Invalid username or password';
+	    	echo '</div>';
+    	}
     	
-    	Session::setLogin($this);
     }
     
     public function processLogout($args=array())
     {
 	    Session::destroySession();
+	    Session::startSession();
     }
 
 }
