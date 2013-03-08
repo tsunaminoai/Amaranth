@@ -23,7 +23,7 @@ class Action
 		{
 			foreach(Action::$_actions[$actionName] as $handle)
 			{
-				if(($res = call_user_func_array ( $handle, $args )) === false)
+				if(($res = call_user_func_array ( $handle, array($args) )) === false)
 					return false;
 			}
 		}

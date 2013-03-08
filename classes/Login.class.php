@@ -38,7 +38,7 @@ class Login
     {
 	    echo '<div id="logout_form">';
 	    echo '<a href="?Saction=processLogout">Logout</a>';
-	    echo '&nbsp;<a href="?Saction=words">test</a>';
+	    echo '&nbsp;<a href="?action=words">test</a>';
 	    echo '</div>';
     }
     

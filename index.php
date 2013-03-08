@@ -35,6 +35,11 @@ $siteUser = $login->checkLogin();
 
 if($siteUser)
 	$login->showLogoutForm();
+else
+{
+	$signup = new Signup();
+	$signup->showSignupForm();
+}
 
 Action::handleAction($_GET['action'],$_POST);
 
